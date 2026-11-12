@@ -8,9 +8,8 @@
       "markdown_link": "zhaluza_palletizer-102_palletizer.md"
     }
   ],
-
   "visibility": "private",
-  "url": "",
+  "url": "https://github.com/zhaluza/palletizer-102",
   "description": "Generic palletizer component created in Viam 102 course",
   "markdown_link": "README.md",
   "entrypoint": "dist/main",
