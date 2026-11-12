@@ -205,8 +205,15 @@ class Palletizer(Generic, EasyResource):  # noqa: F405  (Generic comes from the 
         if verb == "pack":
             return {"placed": await self.pack()}
 
-        # Route new verbs here: match the verb, call the method,
-        # return what it returns.
+        # autopack: place while there is room, swap full trays.
+        if verb == "autopack":
+            max_boxes_to_pack = command.get("max_boxes_to_pack")
+            if max_boxes_to_pack is not None:
+                try:
+                    max_boxes_to_pack = int(max_boxes_to_pack)
+                except (TypeError, ValueError):
+                    return {"error": "max_boxes_to_pack must be a number"}
+            return await self.autopack(max_boxes_to_pack)
 
         # Anything unrouted gets an answer and a log line, never a stack trace.
         self.logger.warning(f"unknown command: {verb}")
@@ -229,8 +236,28 @@ class Palletizer(Generic, EasyResource):  # noqa: F405  (Generic comes from the 
             "boxes_packed": len(self.placed),
         }
 
-    # ------------------------------------------------------------ the verbs
-    # pick is complete. place and pack are yours to write.
+    async def autopack(self, max_boxes_to_pack=None):
+        """The loop: place while there is room, swap a full tray, stop at
+        max_boxes_to_pack."""
+        boxes_per_pallet = self.columns * self.rows * self.layers
+
+        if max_boxes_to_pack is None:
+            max_boxes_to_pack = boxes_per_pallet
+
+        placed = 0
+        while placed < max_boxes_to_pack:
+            if not await self.pallet_has_room():
+                await self.swap_tray()
+                continue
+
+
+            await self.place()
+
+            placed += 1
+
+        result = {"Number Packed": placed, "Max Boxes": max_boxes_to_pack}
+        self.logger.info(f"autopack: {result}")
+        return result
 
     async def pick(self, seq=0):
         """Pick the box at the pick-station and lift it clear.
